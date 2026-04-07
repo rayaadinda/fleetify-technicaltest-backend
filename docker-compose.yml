@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: fleetify_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fleetify
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d fleetify"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fleetify_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_PORT: 8080
+      DATABASE_URL: host=db user=postgres password=postgres dbname=fleetify port=5432 sslmode=disable
+      JWT_SECRET: super-secret-key
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:
